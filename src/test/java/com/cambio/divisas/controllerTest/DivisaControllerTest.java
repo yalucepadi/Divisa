@@ -76,7 +76,6 @@ public class DivisaControllerTest {
 
     @Test
     public void testCambioExitoso() throws Exception {
-        // Datos de entrada simulados
         DivisaDto divisaDto = new DivisaDto();
         divisaDto.setMonedaOrigen("Dolares");
         divisaDto.setMonedaDestino("Soles");
@@ -150,7 +149,6 @@ public class DivisaControllerTest {
 
     @Test
     public void testGetDivisaById_OK() throws Exception {
-        // Crear un DivisaResponse con los datos de prueba
         DivisaDto divisaResponse = new DivisaDto();
         divisaResponse.setId(1);
         divisaResponse.setMonedaOrigen("Dolares");
@@ -179,7 +177,7 @@ public class DivisaControllerTest {
         when(divisaService.getDivisaById(2)).thenThrow(new NoSuchElementException("No value present"));
 
         mockMvc.perform(get("/api/divisa/2"))
-                .andExpect(status().isNotFound()) // Verificar que el estatus sea 404
+                .andExpect(status().isNotFound()) 
                 .andExpect(jsonPath("$.error").value("Server Error"))
                 .andExpect(jsonPath("$.message").value("No value present"))
                 .andExpect(jsonPath("$.status").value(404));
