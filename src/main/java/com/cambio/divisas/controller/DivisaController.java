@@ -2,16 +2,22 @@ package com.cambio.divisas.controller;
 
 import com.cambio.divisas.domain.request.DivisaDto;
 import com.cambio.divisas.domain.response.DivisaResponse;
+import com.cambio.divisas.domain.response.ResponseGeneralDto;
 import com.cambio.divisas.domain.response.ResponseGenerico;
 import com.cambio.divisas.exception.DivisaException;
 import com.cambio.divisas.exception.ErrorResponse;
 import com.cambio.divisas.service.DivisaServiceImpl;
+import com.cambio.divisas.util.Contants;
+import com.cambio.divisas.util.DivisaAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+
 
 @RestController
 @RequestMapping("/api")
@@ -22,7 +28,7 @@ public class DivisaController {
 
 
     @PostMapping("/cambio")
-    public ResponseEntity<?> cambio(@RequestBody DivisaDto divisaDto) {
+    public ResponseEntity<ResponseGeneralDto> cambio(@RequestBody DivisaDto divisaDto) {
         try {
             String resultadoCambio = divisaService.calculoCambioOperacion(divisaDto);
 
@@ -39,66 +45,82 @@ public class DivisaController {
                     + divisaDto.getMonedaDestino()
                     + " es " + montoFinal + " " + divisaDto.getMonedaDestino());
 
-            return ResponseEntity.ok(response);
+            return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_200, HttpStatus.OK.value(),
+                    Contants.messageProcessOK,response),HttpStatus.OK);
 
         } catch (NumberFormatException e) {
 
             throw new DivisaException("Por favor revisa los datos ingresados.");
         } catch (DivisaException e) {
 
-            return ResponseEntity.status(500).body(new ErrorResponse("Server Error", e.getMessage(), 500));
+            return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_500,
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    Contants.messageProcessError,e.getMessage()),HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(new ErrorResponse("Server Error",
-                    "Error en el servidor: " + e.getMessage(), 500));
+            return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_500,
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    Contants.messageProcessError,e.getMessage()),HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping("divisa/{id}")
-    public ResponseEntity<?> getDivisaById(@PathVariable Integer id) {
+    public ResponseEntity<ResponseGeneralDto> getDivisaById(@PathVariable Integer id) {
         try {
+            return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_200, HttpStatus.OK.value(),
+                    Contants.messageProcessOK,divisaService.getDivisaById(id)),HttpStatus.OK);
 
-            return ResponseEntity.ok(divisaService.getDivisaById(id));
         } catch (DivisaException e) {
-            return ResponseEntity.status(404).body(new ErrorResponse("Not Found", e.getMessage(), 404));
+            return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_404,
+                    HttpStatus.NOT_FOUND.value(),
+                    Contants.messageProcessNotFound,e.getMessage()),HttpStatus.NOT_FOUND);
 
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(new ErrorResponse("Server Error", e.getMessage(), 404));
+            return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_404,
+                    HttpStatus.NOT_FOUND.value(),
+                    Contants.messageProcessNotFound,e.getMessage()),HttpStatus.NOT_FOUND);
         }
 
     }
 
     @GetMapping("/divisas")
-    public List<DivisaDto> getAllDivisas() {
+    public ResponseEntity<ResponseGeneralDto> getAllDivisas() {
+        List<DivisaDto> divisaFound= divisaService.getDivisas();
+        return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_200, HttpStatus.OK.value(),
+                Contants.messageProcessOK,divisaFound),HttpStatus.OK);
 
-        return divisaService.getDivisas();
     }
 
 
     @DeleteMapping("divisa/{id}")
-    public ResponseEntity<?> deleteDivisa(@PathVariable Integer id) {
+    public ResponseEntity<ResponseGeneralDto> deleteDivisa(@PathVariable Integer id) {
         try {
             ResponseGenerico response = new ResponseGenerico();
             response.setComentario(divisaService.deleteDivisaById(id));
             if (response.getComentario().equals("Divisa no existe")) {
 
+                return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_404,
+                        HttpStatus.NOT_FOUND.value(),
+                        Contants.messageProcessNotFound,response),HttpStatus.NOT_FOUND);
 
-                return new ResponseEntity(response, HttpStatusCode.valueOf(404));
             } else {
-                return ResponseEntity.ok(response);
+                return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_200, HttpStatus.OK.value(),
+                        Contants.messageProcessOK,response),HttpStatus.OK);
             }
         } catch (DivisaException e) {
 
-            return ResponseEntity.status(404).body(new ErrorResponse("Not Found",
-                    divisaService.deleteDivisaById(id), 404));
+            return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_404,
+                    HttpStatus.NOT_FOUND.value(),
+                    Contants.messageProcessNotFound,e.getMessage()),HttpStatus.NOT_FOUND);
 
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(new ErrorResponse("Server Error",
-                    divisaService.deleteDivisaById(id), 404));
+            return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_404,
+                    HttpStatus.NOT_FOUND.value(),
+                    Contants.messageProcessNotFound,e.getMessage()),HttpStatus.NOT_FOUND);
         }
     }
 
     @PostMapping("/actualizarTipoDeCambio")
-    public ResponseEntity<?> actualizarPrecioCambio(
+    public ResponseEntity<ResponseGeneralDto> actualizarPrecioCambio(
             @RequestParam Integer id,
             @RequestParam Double nuevoTipoDeCambio) {
         try {
@@ -112,9 +134,14 @@ public class DivisaController {
             response.setMonedaDestino(divisaDto.getMonedaDestino());
             response.setResultado(divisaDto.getMontoFinal());
             response.setComentario("Divisa actualizada correctamente");
-            return ResponseEntity.ok(response);
+            return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_200, HttpStatus.OK.value(),
+                    Contants.messageProcessOK,response),HttpStatus.OK);
         } catch (RuntimeException e) {
-            throw new DivisaException("Por favor revisa los datos ingresados.");
+
+            return new ResponseEntity<>(DivisaAdapter.responseGeneral(Contants.HTTP_400,
+                    HttpStatus.BAD_REQUEST.value(),
+                    Contants.messageProcessBadRequest,"Por favor revisa los datos ingresados."),HttpStatus.BAD_REQUEST);
+
 
         } catch (Exception e) {
             throw new RuntimeException("Error en el servidor: " + e.getMessage());
